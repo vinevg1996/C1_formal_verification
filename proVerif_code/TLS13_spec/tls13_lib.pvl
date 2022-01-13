@@ -1,0 +1,54 @@
+(*set attacker = passive.*)
+
+free c:channel.
+
+const xCurve:bitstring [data].
+const xBase:bitstring [data].
+const xnull:bitstring [data].
+const label1:bitstring [data].
+const label2:bitstring [data].
+const label3:bitstring [data].
+const label4:bitstring [data].
+const label5:bitstring [data].
+const label6:bitstring [data].
+const label7:bitstring [data].
+const label8:bitstring [data].
+const label9:bitstring [data].
+const label10:bitstring [data].
+const label11:bitstring [data].
+const label12:bitstring [data].
+
+event ClientKeys(bitstring, bitstring, bitstring, bitstring, bitstring).
+event ServerKeys(bitstring, bitstring, bitstring, bitstring, bitstring).
+event ClientKey(bitstring).
+event ServerKey(bitstring).
+
+fun Exp(bitstring,bitstring,bitstring):bitstring.
+fun Sign(bitstring,bitstring):bitstring.
+  reduc forall msg:bitstring,sign_key:bitstring;
+    CheckSign(Sign(msg, sign_key), Exp(xCurve, xBase, sign_key)) = msg.
+fun Encrypt(bitstring,bitstring):bitstring.
+  reduc forall a0:bitstring,a1:bitstring;
+    Decrypt(Encrypt(a0,a1),a1) = a0.
+
+equation forall a1:bitstring,a2:bitstring;
+  Exp(xCurve, Exp(xCurve, xBase, a1), a2) = Exp(xCurve, Exp(xCurve, xBase, a2), a1).
+
+free secret_bit:bitstring [private].
+query attacker(secret_bit).
+(*
+query x:bitstring;
+  event(ClientKey(x)) && event(ServerKey(x)).
+*)
+type ID.
+const Client,Server,TTP:ID.
+table PubKeyTable(ID, bitstring).
+table PrivKeyTable(ID, bitstring).
+
+fun hmac(bitstring,bitstring):bitstring.
+fun hash(bitstring):bitstring.
+
+letfun hkdf_extract(salt:bitstring,ikm:bitstring) = hmac(salt,ikm).
+letfun hkdf_expand(prk:bitstring, info:bitstring) = hmac(prk,info).
+letfun hkdf_expand_label(sec:bitstring,label:bitstring,context:bitstring) =
+  hkdf_expand(sec,(label,hash(context))).

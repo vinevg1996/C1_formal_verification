@@ -1,0 +1,131 @@
+let processClnt_psk =
+  get SessionTicketsTable(=Client,=session1,ticketNonce:bitstring) in
+  get MasterSecretsTable(=Client, =session1, vMasterSecret:bitstring) in
+  let rmSecret = derive_secret(vMasterSecret, tls13_resumption_master, ticketNonce) in
+  let (vEarlySecret:bitstring, binder_mac_key:bitstring) = kdf_es(rmSecret, ticketNonce) in
+
+(* msg1 *)
+  new kEcdhX_ECScalar172:bitstring;
+  new kEcdhX_ECScalar162:bitstring;
+  let vPostHandshAuth = xnull in
+  let vExtendedMasterSecret = xnull in
+  let vEncryptThenMAC = xnull in
+  let vSessionTicket = xnull in
+  let vCurve256k1BasePoint = xBase in
+  let f164 = Exp(xCurve,vCurve256k1BasePoint,kEcdhX_ECScalar162) in
+  let vCurve256v1BasePoint = xBase in
+  let f174 = Exp(xCurve,vCurve256v1BasePoint,kEcdhX_ECScalar172) in
+  let o178 = (f164, f174) in
+  let f180 = o178 in
+  let vGroups = xCurve in
+  let f94 = vGroups in
+  let vServerName1 = ascii_Alice in
+  let vPointFormats = x00 in
+  let f84 = vPointFormats in
+  let vNameType1 = x00 in
+  let f75 = (vNameType1,vServerName1) in
+  let f77 = f75 in
+  let vSuites = x1301 in
+  let vSessionId = x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e20 in
+  let f23 = vSessionId in
+  new kClntRandom_Plain20:bitstring;
+  let vSuppVersions = x0303 in
+  let f143 = vSuppVersions in
+  let vSigSchemes = x0403 in
+  let f135 = vSigSchemes in
+  let vPskKEmodes = x00 in
+  let f150 = vPskKEmodes in
+  let vClntVersion = x0303 in
+  let o184_zero = (f77,f84,f94,vSessionTicket,vEncryptThenMAC,
+              vExtendedMasterSecret,f135,f143,f150,
+              vPostHandshAuth,f180) in
+  let f61_zero = (vClntVersion,kClntRandom_Plain20,f23,vSuites,x00,o184_zero) in
+  let binders = HMAC(binder_mac_key, f61_zero) in
+  let o184 = (f77,f84,f94,vSessionTicket,vEncryptThenMAC,
+              vExtendedMasterSecret,f135,f143,f150,
+              vPostHandshAuth,f180, binders) in
+  let f61 = (vClntVersion,kClntRandom_Plain20,f23,vSuites,x00,o184) in
+  let vHshkTypeClnt1 = x01 in
+  let vHshkMsg1 = (vHshkTypeClnt1,f61) in
+  let vContentType1 = x16 in
+  let vVersion1 = x0303 in
+  out(c,(t1,vContentType1,vVersion1,vHshkMsg1));
+
+(* msg2 *)
+  in(c,(=t2,vContentType2:bitstring,vVersion2:bitstring,o197:bitstring));
+  let vHshkMsg2 = o197 in
+  let (vHshkTypeServ2:bitstring,o204:bitstring) = vHshkMsg2 in
+  let (vVersionservHello:bitstring,kServRandom_Plain213:bitstring,=f23,vSelectedSuite:bitstring,=x00,o245:bitstring) = o204 in
+  let f271 = o245 in
+  let (vSelectedVersion:bitstring,f267:bitstring) = f271 in
+  let (vSelectedGroup:bitstring,o264:bitstring) = f267 in
+  let f276 = o264 in
+
+(* msg3 *)
+  in(c,(=t3,vContentType3:bitstring,vVersion3:bitstring,f283:bitstring));
+  let o281 = f283 in
+
+(* msg4 *)
+  in(c,(=t4,vContentType4:bitstring,vVersion4:bitstring,o290:bitstring));
+  let vEncryptedContent4 = o290 in
+  let f361 = PadWith064(vEarlySecret) in
+  let f342 = Hash(xnull) in
+  let f317 = xnull in
+  let f329 = Hash((vHshkMsg1,vHshkMsg2)) in
+  let f331 = f329 in
+  let f401 = (x0010,ascii_tls13key,f317)in
+  let f346 = (x0020,ascii_tls13derived,f342) in
+  let f368 = HMAC(f361,f346) in
+  let f370 = PadWith064(f368) in
+  let vHandshSecret = HMAC(f370, Exp(vSelectedGroup,f276,kEcdhX_ECScalar172)) in
+
+  let f378 = PadWith064(vHandshSecret) in
+  let f380 = f378 in
+  let f379 = f378 in
+  let f385 = HMAC(f378, (x0020,ascii_tls13shstraffic,f331)) in
+  let f387 = PadWith064(f385) in
+  let f407 = HMAC(f387, f401) in
+  let f319 = (x000c,ascii_tls13iv,f317) in
+  let f394 = HMAC(f387, f319) in
+  let plain_mess_1 = Decrypt(vEncryptedContent4,f394,f407,(x17,x0303)) in
+  let vScale4 = x01 in
+  let f299 = Unpadx0016(plain_mess_1,vScale4) in
+  let (o298:bitstring,vInnContTypeServ4:bitstring) = f299 in
+  let vHshkMsg4 = o298 in
+  let (vHshkTypeServ4:bitstring,o986:bitstring) = vHshkMsg4 in
+  if vHshkTypeServ4 = x14 then
+  if vInnContTypeServ4 = x16 then
+  let f997 = (x0020,ascii_tls13finished,f317) in
+  let f1002 = HMAC(f387, f997) in
+  let f1004 = PadWith064(f1002) in
+  let vFinishedServ_plain = (vHshkMsg1,vHshkMsg2) in
+  let vFinishedServ = HMAC(f1004, vFinishedServ_plain) in
+  if o986 = vFinishedServ then
+  event Clnt_psk_mess(vEncryptedContent4);
+
+(* msg10 *)
+  in(c,(=t10,vContentType10:bitstring,vVersion10:bitstring,o1107:bitstring));
+  let vEncryptedContent10 = o1107 in
+  let f1161 = HMAC(f378, f346) in
+  let f1163 = PadWith064(f1161) in
+  let vMasterSecret = HMAC(f1163, x00000000_32) in
+  let f1171 = PadWith064(vMasterSecret) in
+  let vApplTrafSecretServ10 = HMAC(f1171, ascii_tls13saptraffic) in
+  let f1179 = PadWith064(vApplTrafSecretServ10) in
+  let f1193 = HMAC(f1179, f401) in
+  let f1186 = HMAC(f1179, f319) in
+  let vApplCtrServ10 = x00000000_12 in
+  let vScale10 = x01 in
+  let iv10 = f1186 in
+  let plain_mess_10 = Decrypt(vEncryptedContent10,iv10,f1193,(x17,x0303)) in
+  let f1115 = Unpadx0016(plain_mess_10, vScale10) in
+  let (o1114:bitstring,vInnContTypeServ10:bitstring) = f1115 in
+  let (vHshkTypeServ10:bitstring,o1202:bitstring) = o1114 in
+  let (tTicketLifeTime10_UTCExpiredIn100001207:bitstring,
+       kTicketAgeAdd10_Plain1208:bitstring,
+       vTicketNonce10:bitstring,
+       vTicket10:bitstring,
+       vHelloExts10:bitstring) = o1202 in
+  insert SessionTicketsTable(Client, session2, vTicketNonce10);
+  insert MasterSecretsTable(Client, session2, vMasterSecret);
+  event Clnt_psk_end(vHandshSecret).

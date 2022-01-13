@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cat lib_full_tls_oracles.pv > result_full_tls_oracles.pv
+
+#proof_file="proof_lemma_${1}.pv" 
+#echo "$proof_file"
+proof_file="proof_lemma_1.pv"
+cat $proof_file >> result_full_tls_oracles.pv
+
+cat lib_for_equivs.pv >> result_full_tls_oracles.pv
+cat full_tls_clnt_oracles.pv >> result_full_tls_oracles.pv
+cat full_tls_serv_oracles.pv >> result_full_tls_oracles.pv
+./../../cryptoverif result_full_tls_oracles.pv

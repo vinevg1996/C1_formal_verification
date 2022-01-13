@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cat clnt_tls.pv > run_tls.pv
+cat clnt_psk.pv >> run_tls.pv
+cat serv_psk.pv >> run_tls.pv
+cat serv_tls.pv >> run_tls.pv
+proverif -lib tls_lib.pvl run_tls.pv

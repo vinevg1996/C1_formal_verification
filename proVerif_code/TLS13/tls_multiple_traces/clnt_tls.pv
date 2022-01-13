@@ -1,0 +1,289 @@
+let processClnt() =
+  get PubKeyTable(=TTP,ttp_pub_key:bitstring) in
+  let servAddr = x2a864886f70d010901 in
+(* msg1 *)
+  new kEcdhX_ECScalar172:bitstring;
+  new kEcdhX_ECScalar162:bitstring;
+  let vPostHandshAuth = xnull in
+  let vExtendedMasterSecret = xnull in
+  let vEncryptThenMAC = xnull in
+  let vSessionTicket = xnull in
+  let vCurve256k1BasePoint = xBase in
+  let f164 = Exp(xCurve,vCurve256k1BasePoint,kEcdhX_ECScalar162) in
+  let vCurve256v1BasePoint = xBase in
+  let f174 = Exp(xCurve,vCurve256v1BasePoint,kEcdhX_ECScalar172) in
+  let o178 = (f164, f174) in
+  let f180 = o178 in
+  let vGroups = xCurve in
+  let f94 = vGroups in
+  let vServerName1 = ascii_Alice in
+  let vPointFormats = x00 in
+  let f84 = vPointFormats in
+  let vNameType1 = x00 in
+  let f75 = (vNameType1,vServerName1) in
+  let f77 = f75 in
+  let vSuites = x1301 in
+  let vSessionId = x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f in
+  let f23 = vSessionId in
+  new kClntRandom_Plain20:bitstring;
+  let vSuppVersions = x0303 in
+  let f143 = vSuppVersions in
+  let vSigSchemes = x0403 in
+  let f135 = vSigSchemes in
+  let vPskKEmodes = x01 in
+  let f150 = vPskKEmodes in
+  let o184 = (f77,f84,f94,vSessionTicket,vEncryptThenMAC,
+              vExtendedMasterSecret,f135,f143,f150,
+              vPostHandshAuth,f180) in
+  let vClntVersion = x0303 in
+  let f61 = (vClntVersion,kClntRandom_Plain20,f23,vSuites,x00,o184) in
+  let vHshkTypeClnt1 = x01 in
+  let vHshkMsg1 = (vHshkTypeClnt1,f61) in
+  let vContentType1 = x16 in
+  let vVersion1 = x0303 in
+  out(c,(t1,vContentType1,vVersion1,vHshkMsg1));
+
+(* msg2 *)
+  in(c,(=t2,vContentType2:bitstring,vVersion2:bitstring,o197:bitstring));
+  let vHshkMsg2 = o197 in
+  let (vHshkTypeServ2:bitstring,o204:bitstring) = vHshkMsg2 in
+  let (vVersionservHello:bitstring,kServRandom_Plain213:bitstring,=f23,vSelectedSuite:bitstring,=x00,o245:bitstring) = o204 in
+  let f271 = o245 in
+  let (vSelectedVersion:bitstring,f267:bitstring) = f271 in
+  let (vSelectedGroup:bitstring,o264:bitstring) = f267 in
+  let f276 = o264 in
+
+(* msg3 *)
+  in(c,(=t3,vContentType3:bitstring,vVersion3:bitstring,f283:bitstring));
+  let o281 = f283 in
+
+(* msg4 *)
+  in(c,(=t4,vContentType4:bitstring,vVersion4:bitstring,o290:bitstring));
+  let vEncryptedContent4 = o290 in
+  let f351 = PadWith064(xnull) in
+  let vEarlySecret = HMAC(f351,x00000000_32) in
+  let f361 = PadWith064(vEarlySecret) in
+  let f342 = Hash(xnull) in
+  let f317 = xnull in
+  let f329 = Hash((vHshkMsg1,vHshkMsg2)) in
+  let f331 = f329 in
+  let f401 = (x0010,ascii_tls13key,f317)in
+  let f346 = (x0020,ascii_tls13derived,f342) in
+  let f368 = HMAC(f361,f346) in
+  let f370 = PadWith064(f368) in
+  let vHandshSecret = HMAC(f370, Exp(vSelectedGroup,f276,kEcdhX_ECScalar172)) in
+  let f378 = PadWith064(vHandshSecret) in
+  let f385 = HMAC(f378, (x0020,ascii_tls13shstraffic,f331)) in
+  let f387 = PadWith064(f385) in
+  let f407 = HMAC(f387, f401) in
+  let f319 = (x000c,ascii_tls13iv,f317) in
+  let f394 = HMAC(f387, f319) in
+  let vHshkCtrServ4 = x00000000_12 in
+  let vScale4 = x01 in
+  let iv4 = f394 in
+  let plain_mess_1 = Decrypt(vEncryptedContent4,iv4,f407,(x17,x0303)) in
+  let f299 = Unpadx0016(plain_mess_1,vScale4) in
+  let (o298:bitstring,vInnContTypeServ4:bitstring) = f299 in
+  let vHshkMsg4 = o298 in
+  let (vHshkTypeServ4:bitstring,o418:bitstring) = vHshkMsg4 in
+  let vEncryptedExtens4 = o418 in
+
+(* msg5 *)
+  in(c,(=t5,vContentType5:bitstring,vVersion5:bitstring,o429:bitstring));
+  let vEncryptedContent5 = o429 in
+  let vHshkCtrServ5 = Add1(vHshkCtrServ4) in
+  let vScale5 = x01 in
+  let iv5 = Add1(iv4) in
+  let plain_mess_2 = Decrypt(vEncryptedContent5,iv5,f407,(x17,x0303)) in
+  let f437 = Unpadx0016(plain_mess_2,vScale5) in
+
+(* parse vCertificate *)
+  let (o436:bitstring,vInnContTypeServ5:bitstring) = f437 in
+  let vHshkMsg5 = o436 in
+  let (vHshkTypeServ5:bitstring,o456:bitstring) = vHshkMsg5 in
+  let (vCertReqContext5:bitstring,f809:bitstring) = o456 in
+  let (vCertificate:bitstring,vNextCertServ:bitstring) = f809 in
+  let f802 = vCertificate in
+  let (f786:bitstring,
+       f793:bitstring,
+       f798:bitstring) = f802 in
+  let cert_pub_key = f793 in
+  if cert_pub_key = ttp_pub_key then
+  let cert_inner = CheckSign(f798, cert_pub_key) in
+  if cert_inner = f786 then
+  let vHshkCertSigAlgObj2 = f793 in
+  let (vHshkCertOption:bitstring,
+       f473:bitstring,
+       f481:bitstring,
+       vHshkCertNameServ:bitstring,
+       f650:bitstring,
+       vHshkCertNameCA:bitstring,
+       f781:bitstring,
+       vHshkCertExtensions:bitstring) = f786 in
+  let (f771:bitstring,f777:bitstring) = f781 in
+  let f847 = f777 in
+  let (vHshkCertPointFmt:bitstring,o846:bitstring) = f847 in
+  let (vHshkCertPubkeyAlgObj:bitstring,o770:bitstring) = f771 in
+  let vHshkCertCurveIdCA = o770 in
+  let o762 = vHshkCertNameCA in
+  let (f662:bitstring,
+       f673:bitstring,
+       f695:bitstring,
+       f706:bitstring,
+       f717:bitstring,
+       f736:bitstring) = o762 in
+  let f733:bitstring = f736 in
+  let (f596:bitstring,vHshkCertCaDN421347213424713191:bitstring) = f733 in
+  let f714 = f717 in
+  let (f572:bitstring,vHshkCertCaDN8543:bitstring) = f714 in
+  let f703 = f706 in
+  let (f556:bitstring,vHshkCertCaDN85411:bitstring) = f703 in
+  let f692 = f695 in
+  let (f540:bitstring,vHshkCertCaDN85410:bitstring) = f692 in
+  let f670 = f673 in
+  let (f507:bitstring,vHshkCertCaDN8548:bitstring) = f670 in
+  let f659:bitstring = f662 in
+  let (f490:bitstring,vHshkCertCaDN8546:bitstring) = f659 in
+  let (f641:bitstring,f646:bitstring) = f650 in
+  let (vHshkCertNotAfter:bitstring,=x5a) = f646 in
+  let (vHshkCertNotBefore:bitstring,=x5a) = f641 in
+  let o635 = vHshkCertNameServ in
+  let (f499:bitstring,
+       f516:bitstring,
+       f548:bitstring,
+       f564:bitstring,
+       f580:bitstring,
+       f604:bitstring) = o635 in
+  let f601 = f604 in
+  let (=f596,vHshkCertUserDN421347213424713191:bitstring) = f601 in
+  let vOIDEmailAddress:bitstring = f596 in
+  if servAddr = x2a864886f70d010901 then
+  let f577 = f580 in
+  let (=f572,vHshkCertUserDN8543:bitstring) = f577 in
+  let vOIDCommonName = f572 in
+  let f561:bitstring = f564 in
+  let (=f556,vHshkCertUsvCertificateerDN85411:bitstring) = f561 in
+  let vOIDOrgUnit = f556 in
+  let f545:bitstring = f548 in
+  let (=f540,vHshkCertUserDN85410:bitstring) = f545 in
+  let vOIDOrganization = f540 in
+  let f513 = f516 in
+  let (=f507,vHshkCertUserDN8548:bitstring) = f513 in
+  let vOIDProvince:bitstring = f507 in
+  let f496 = f499 in
+  let (=f490,vHshkCertUserDN8546:bitstring) = f496 in
+  let vOIDCountry = f490 in
+  let vHshkCertSigAlgObj11:bitstring = f481 in
+
+(* msg6 *)
+  in(c,(=t6,vContentType6:bitstring,vVersion6:bitstring,o855:bitstring));
+  let vEncryptedContent6 = o855 in
+  let vHshkCtrServ6 = Add1(vHshkCtrServ5) in
+  let vScale6 = x01 in
+  let iv6 = Add1(iv5) in
+  let plain_mess_3 = Decrypt(vEncryptedContent6,iv6,f407,(x17,x0303)) in
+  let f863 = Unpadx0016(plain_mess_3,vScale6) in
+  let (o862:bitstring,vInnContTypeServ6:bitstring) = f863 in
+  let vHshkMsg6 = o862 in
+  let (vHshkTypeServ6:bitstring,o882:bitstring) = vHshkMsg6 in
+  let (vCertSigScheme:bitstring,f916:bitstring) = o882 in
+  let f927 = f916 in
+  (* f927 -- sign *)
+  let Handsh_mess = (vHshkMsg1,vHshkMsg2,vHshkMsg4,vHshkMsg5) in
+  let Handsh_hash = Hash(Handsh_mess) in
+  if Handsh_hash = CheckSign(f927, o846) then
+  event Client_mess(plain_mess_3);
+
+(* msg7 *)
+  in(c,(=t7,vContentType7:bitstring,vVersion7:bitstring,o959:bitstring));
+  let vEncryptedContent7 = o959 in
+  let vHshkCtrServ7 = Add1(vHshkCtrServ6) in
+  let vScale7 = x01 in
+  let iv7 = Add1(iv6) in
+  let plain_mess_7 = Decrypt(vEncryptedContent7,iv7,f407,(x17,x0303)) in
+  let f967 = Unpadx0016(plain_mess_7,vScale7) in
+  let (o966:bitstring,vInnContTypeServ7:bitstring) = f967 in
+  let vHshkMsg7 = o966 in
+  let (vHshkTypeServ7:bitstring,o986:bitstring) = vHshkMsg7 in
+  if vHshkTypeServ7 = x14 then
+  if vInnContTypeServ7 = x16 then
+  let f997 = (x0020,ascii_tls13finished,f317) in
+  let f1002 = HMAC(f387, f997) in
+  let f1004 = PadWith064(f1002) in
+  let vFinishedServ_plain = (vHshkMsg1,vHshkMsg2,vHshkMsg4,vHshkMsg5,vHshkMsg6) in
+  let vFinishedServ = HMAC(f1004, vFinishedServ_plain) in
+  if o986 = vFinishedServ then
+  event ServerFinished_Check(vFinishedServ);
+
+(* msg8 *)
+  let vContentType8 = x14 in
+  let vVersion8 = x0303 in
+  out(c,(t8,vContentType8,vVersion8,f283));
+
+(* msg9 *)
+  let f1030 = Hash((vHshkMsg1,vHshkMsg2,vHshkMsg4,vHshkMsg5,vHshkMsg6,vHshkMsg7)) in
+  let f1040 = HMAC(f378, (x0020,ascii_tls13chstraffic,f331)) in
+  let f1042 = PadWith064(f1040) in
+  let vHshkCtrClnt9 = x00000000_12 in
+  let f1049 = HMAC(f1042, f997) in
+  let f1051 = PadWith064(f1049) in
+  let vFinishedClnt9 = HMAC(f1051, f1030) in
+  let vHshkTypeClnt9 = x14 in
+  let vHshkMsg9 = (vHshkTypeClnt9,vFinishedClnt9) in
+  let vInnContTypeClnt9 = x16 in
+  let vScale9 = x01 in
+  let f1063 = Padx0016((vHshkMsg9,vInnContTypeClnt9),vScale9) in
+  let a0 = f1063 in
+  let a1 = HMAC(f1042, f319) in
+  let iv9 = a1 in
+  let a2 = HMAC(f1042, f401) in
+  let a3 = (x17,x0303) in
+  let vEncryptedContent9 = Encrypt(a0, a1, a2, a3) in
+  event Client_mess(f1030);
+  let vContentType9 = x17 in
+  let vVersion9 = x0303 in
+  event ClientFinished_Check(vFinishedClnt9);
+  out(c,(t9,vContentType9,vVersion9,vEncryptedContent9));
+
+(* msg10 *)
+  in(c,(=t10,vContentType10:bitstring,vVersion10:bitstring,o1107:bitstring));
+  let vEncryptedContent10 = o1107 in
+  let f1161 = HMAC(f378, f346) in
+  let f1163 = PadWith064(f1161) in
+  let vMasterSecret = HMAC(f1163, x00000000_32) in
+  let f1171 = PadWith064(vMasterSecret) in
+  let vApplTrafSecretServ10 = HMAC(f1171, (ascii_tls13saptraffic,f1030)) in
+  let f1179 = PadWith064(vApplTrafSecretServ10) in
+  let f1193 = HMAC(f1179, f401) in
+  let f1186 = HMAC(f1179, f319) in
+  let vApplCtrServ10 = x00000000_12 in
+  let vScale10 = x01 in
+  let iv10 = f1186 in
+  let plain_mess_10 = Decrypt(vEncryptedContent10,iv10,f1193,(x17,x0303)) in
+  let f1115 = Unpadx0016(plain_mess_10, vScale10) in
+  let (o1114:bitstring,vInnContTypeServ10:bitstring) = f1115 in
+  let (vHshkTypeServ10:bitstring,o1202:bitstring) = o1114 in
+  let (tTicketLifeTime10_UTCExpiredIn100001207:bitstring,
+       kTicketAgeAdd10_Plain1208:bitstring,
+       vTicketNonce10:bitstring,
+       vTicket10:bitstring,
+       vHelloExts10:bitstring) = o1202 in
+
+(* msg11 *)
+  in(c,(=t11,vContentType11:bitstring,vVersion11:bitstring,o1222:bitstring));
+  let vEncryptedContent11 = o1222 in
+  let vScale11 = x01 in
+  let iv11 = Add1(iv10) in
+  let plain_mess_11 = Decrypt(vEncryptedContent11,iv11,f1193,(x17,x0303)) in
+  let unpad_plain_mess_11 = Unpadx0016(plain_mess_11, vScale11) in
+  let (o3114:bitstring,vInnContTypeServ11:bitstring) = unpad_plain_mess_11 in
+  let (vHshkTypeServ11:bitstring,o3202:bitstring) = o3114 in
+  let (tTicketLifeTime11_UTCExpiredIn100001207:bitstring,
+       kTicketAgeAdd11_Plain1208:bitstring,
+       vTicketNonce11:bitstring,
+       vTicket11:bitstring,
+       vHelloExts11:bitstring) = o3202 in
+  insert SessionTicketsTable(Client, session1, vTicketNonce10);
+  insert MasterSecretsTable(Client, session1, vMasterSecret);
+  event TicketNonceClient(vTicketNonce11);
+  event Client_end(vMasterSecret).

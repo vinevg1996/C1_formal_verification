@@ -1,0 +1,10 @@
+query event(Client_Accept) && event(Server_Reject).
+
+proof {
+  crypto uf_cma(serv_sign) rkS;
+  crypto uf_cma(clnt_sign) rkC;
+  crypto prf_odh(PRF_ms);
+  crypto cma_gen_serv_fin_first(serv_fin);
+  crypto cma_gen_clnt_fin_second(clnt_fin);
+  success
+}

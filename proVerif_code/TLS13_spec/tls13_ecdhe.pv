@@ -1,0 +1,127 @@
+let processTTP =
+  (* Clnt keys *)
+  new clnt_priv_key:bitstring;
+  insert PrivKeyTable(Client,clnt_priv_key);
+  let clnt_pub_key = Exp(xCurve, xBase, clnt_priv_key) in
+  insert PubKeyTable(Client,clnt_pub_key);
+  (* Serv keys *)
+  new serv_priv_key:bitstring;
+  insert PrivKeyTable(Server,serv_priv_key);
+  let serv_pub_key = Exp(xCurve, xBase, serv_priv_key) in
+  insert PubKeyTable(Server,serv_pub_key);
+  out(c,clnt_pub_key);
+  out(c,serv_pub_key).
+
+let Client13 =
+  get PrivKeyTable(=Client,client_skey:bitstring) in
+  get PubKeyTable(=Client,client_pkey:bitstring) in
+  get PubKeyTable(=Server,server_pkey:bitstring) in
+(* msg1 *)
+  new rC:bitstring;
+  new x:bitstring;
+  let X = Exp(xCurve, xBase, x) in
+  let ES = hkdf_extract(xnull, xnull) in
+  let H0 = hash(xnull) in
+  let dES = hkdf_expand_label(ES, label3, H0) in
+  let CH = (rC, X) in
+  out(c, CH);
+(* msg2 *)
+  in(c, SH:bitstring);
+  let (rS:bitstring, Y:bitstring) = SH in
+  let H2 = (CH, SH) in
+  let DHE = Exp(xCurve, Y, x) in
+  let HS = hkdf_extract(dES, DHE) in
+  let CHTS = hkdf_expand_label(HS, label4, H2) in
+  let SHTS = hkdf_expand_label(HS, label5, H2) in
+  let dHS = hkdf_expand_label(HS, label3, H0) in
+(* msg3 *)
+  in(c, (enc_mess_3:bitstring, enc_mess_4:bitstring, enc_mess_5:bitstring));
+  let ServCert = Decrypt(enc_mess_3, SHTS) in
+  let ServCertVer = Decrypt(enc_mess_4, SHTS) in
+  let SF = Decrypt(enc_mess_5, SHTS) in
+
+  (*in(c, (ServCert:bitstring, ServCertVer:bitstring, SF:bitstring));*)
+  let H6 = (CH, SH, ServCert) in
+  let H7 = (CH, SH, ServCert, ServCertVer) in
+  let H3 = (CH, SH, ServCert, ServCertVer, SF) in
+  let pkS = ServCert in
+  let serv_sign = ServCertVer in
+  let serv_str = (label11, H6) in
+  if pkS = server_pkey then
+  if CheckSign(ServCertVer, pkS) = serv_str then
+  let fkS = hkdf_expand_label(SHTS, label6, H0) in
+  if SF = hmac(fkS, H7) then
+  let MS = hkdf_extract(dHS, xnull) in
+  let CATS = hkdf_expand_label(MS, label7, H3) in
+  let SATS = hkdf_expand_label(MS, label8, H3) in
+  let EMS = hkdf_expand_label(MS, label9, H3) in
+(* msg4 *)
+  let fkC = hkdf_expand_label(CHTS, label6, H0) in
+  let H9 = (CH, SH, ServCert, ServCertVer, SF) in
+  let CF = hmac(fkC, H9) in
+  (*let enc_mess_6 = Encrypt(CF, CHTS) in*)
+  let enc_mess_6 = Encrypt(CF, SHTS) in
+  (*out(c, CF);*)
+  out(c, enc_mess_6);
+
+  out(c, Encrypt(secret_bit, CHTS));
+  event ClientKey(CHTS);
+  event ClientKeys(HS, MS, CATS, SATS, EMS).
+
+let Server13 =
+  get PrivKeyTable(=Server,server_skey:bitstring) in
+  get PubKeyTable(=Server,server_pkey:bitstring) in
+  get PubKeyTable(=Client,client_pkey:bitstring) in
+(* msg1 *)
+  in(c, CH:bitstring);
+  let (rC:bitstring, X:bitstring) = CH in
+(* msg2 *)
+  new rS:bitstring;
+  new y:bitstring;
+  let Y = Exp(xCurve, xBase, y) in
+  let ES = hkdf_extract(xnull, xnull) in
+  let H0 = hash(xnull) in
+  let dES = hkdf_expand_label(ES, label3, H0) in
+  let SH = (rS, Y) in
+  out(c, SH);
+(* msg3 *)
+  let H2 = (CH, SH) in
+  let DHE = Exp(xCurve, X, y) in
+  let HS = hkdf_extract(dES, DHE) in
+  let CHTS = hkdf_expand_label(HS, label4, H2) in
+  let SHTS = hkdf_expand_label(HS, label5, H2) in
+  let dHS = hkdf_expand_label(HS, label3, H0) in
+  let ServCert = server_pkey in
+  let H6 = (CH, SH, ServCert) in
+  let serv_str = (label11, H6) in
+  let ServCertVer = Sign(serv_str, server_skey) in
+  let H7 = (CH, SH, ServCert, ServCertVer) in
+  let fkS = hkdf_expand_label(SHTS, label6, H0) in
+  let SF = hmac(fkS, H7) in
+  let H3 = (CH, SH, ServCert, ServCertVer, SF) in
+  (*out(c, (ServCert, ServCertVer, SF));*)
+  let enc_mess_3 = Encrypt(ServCert, SHTS) in
+  let enc_mess_4 = Encrypt(ServCertVer, SHTS) in
+  let enc_mess_5 = Encrypt(SF, SHTS) in
+  out(c, (enc_mess_3, enc_mess_4, enc_mess_5));
+(* msg4 *)
+  let MS = hkdf_extract(dHS, xnull) in
+  let CATS = hkdf_expand_label(MS, label7, H3) in
+  let SATS = hkdf_expand_label(MS, label8, H3) in
+  let EMS = hkdf_expand_label(MS, label9, H3) in
+  (*in(c, CF:bitstring);*)
+  in(c, enc_mess_6:bitstring);
+  (*let CF = Decrypt(enc_mess_6, CHTS) in*)
+  let CF = Decrypt(enc_mess_6, SHTS) in
+  let fkC = hkdf_expand_label(CHTS, label6, H0) in
+  let H9 = (CH, SH, ServCert, ServCertVer, SF) in
+  if CF = hmac(fkC, H9) then
+  event ServerKey(CHTS);
+  event ServerKeys(HS, MS, CATS, SATS, EMS).
+
+process
+  (
+    processTTP() |
+    Client13() |
+    Server13()
+  )

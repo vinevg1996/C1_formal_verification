@@ -1,0 +1,118 @@
+(*param N, NA, NB, NK.*)
+
+type host.
+type keyseed [large,fixed].
+type seed [fixed].
+type pkey [bounded].
+type skey [bounded].
+type blocksize.
+type serv_signature.
+type clnt_signature.
+
+(* Peers *)
+const Clnt,Serv:host.
+
+type Z [large,bounded].
+type G [large,bounded].
+type D [fixed].
+type nonce [large, fixed].
+
+(* ms *)
+type prf_ms_in.
+type concat_for_ms_t.
+type PRF_ms_out [fixed].
+(* sign *)
+type concat_for_serv_sign_t. type concat_for_clnt_sign_t.
+(* finished *)
+type concat_for_serv_fin_t. type concat_for_clnt_fin_t.
+type PRF_serv_fin_out [fixed]. type PRF_clnt_fin_out [fixed].
+(* common_key *)
+type concat_for_common_key_t.
+type PRF_common_key_out [fixed].
+
+(* mess_types *)
+type mess1_t.
+type mess2_t. type mess3_t. type mess4_t.
+type mess7_t. type mess8_t. type mess9_t. type mess11_t.
+type mess13_t.
+fun Mess1(nonce):mess1_t [data].
+fun Mess2(nonce):mess2_t [data].
+fun Mess3(pkey):mess3_t [data].
+fun Mess4(G, serv_signature):mess4_t [data].
+fun Mess7(pkey):mess7_t [data].
+fun Mess8(G):mess8_t [data].
+fun Mess9(clnt_signature):mess9_t [data].
+fun Mess11(PRF_clnt_fin_out):mess11_t [data].
+fun Mess13(PRF_serv_fin_out):mess13_t [data].
+
+(* functions *)
+fun concat_for_ms(nonce, nonce):concat_for_ms_t [data].
+fun concat_for_serv_sign(nonce, nonce, G):concat_for_serv_sign_t [data].
+fun concat_for_clnt_sign(mess1_t, mess2_t, mess3_t,
+                         mess4_t, mess7_t, mess8_t):concat_for_clnt_sign_t [data].
+fun concat_for_clnt_fin(mess1_t, mess2_t, mess3_t,
+                        mess4_t, mess7_t, mess8_t,
+                        mess9_t):concat_for_clnt_fin_t [data].
+fun concat_for_serv_fin(mess1_t, mess2_t, mess3_t,
+                        mess4_t, mess7_t, mess8_t,
+                        mess9_t, PRF_clnt_fin_out):concat_for_serv_fin_t [data].
+fun concat_for_common_key(nonce, nonce):concat_for_common_key_t [data].
+
+expand DH_basic(G, Z, g, exp, exp', mult).
+
+proba Psign. proba Psigncoll.
+(* Server signatures *)
+expand UF_CMA_proba_signature(keyseed, pkey, skey, concat_for_serv_sign_t, serv_signature,
+                              serv_skgen, serv_pkgen, serv_sign, serv_verify, Psign, Psigncoll).
+expand UF_CMA_proba_signature(keyseed, pkey, skey, concat_for_clnt_sign_t, clnt_signature,
+                              clnt_skgen, clnt_pkgen, clnt_sign, clnt_verify, Psign, Psigncoll).
+
+(* PRF_ODH for ms *)
+proba pPRF_ODH_ms.
+expand PRF_ODH1(G, Z, concat_for_ms_t, PRF_ms_out, g, exp, exp',
+                mult, PRF_ms, pPRF_ODH_ms).
+
+(*mac(scvl,sfk) = m*)
+fun PRF_serv_fin(PRF_ms_out, concat_for_serv_fin_t):PRF_serv_fin_out.
+fun PRF_clnt_fin(PRF_ms_out, concat_for_clnt_fin_t):PRF_clnt_fin_out.
+
+(*crypto suf_cma(serv_fin) *;*)
+proba Pmac.
+expand SUF_CMA_det_mac(PRF_ms_out, concat_for_serv_fin_t, PRF_serv_fin_out,
+                       serv_fin, serv_check_fin, Pmac).
+expand SUF_CMA_det_mac(PRF_ms_out, concat_for_clnt_fin_t, PRF_clnt_fin_out,
+                       clnt_fin, clnt_check_fin, Pmac).
+
+
+proba pPRF_fin.
+(*
+expand PRF_1(PRF_ms_out, concat_for_serv_fin_t, PRF_serv_fin_out, PRF_serv_fin, pPRF_fin).
+expand PRF_1(PRF_ms_out, concat_for_clnt_fin_t, PRF_clnt_fin_out, PRF_clnt_fin, pPRF_fin).
+*)
+expand PRF_1(PRF_ms_out, concat_for_common_key_t, PRF_common_key_out,
+             PRF_common_key, pPRF_fin).
+
+(*
+crypto cma_gen_serv_fin_first(serv_fin)
+crypto cma_gen_clnt_fin_second(clnt_fin)
+crypto PRF_common_key *
+*)
+
+channel start, cstart,
+        c1, c2, c3, c4, c5, c6,
+        s1, s2, s3, s4.
+
+(* Queries and Events *)
+event endA(G, G).
+event beginB(G, G).
+event endB(G, G).
+
+event Client_Accept.
+event Server_Accept.
+event Client_Reject.
+event Server_Reject.
+
+(*
+query secret common_key.
+query event(Client_Reject) && event(Server_Accept).
+*)

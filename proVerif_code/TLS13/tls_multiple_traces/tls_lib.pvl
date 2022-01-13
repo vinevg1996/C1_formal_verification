@@ -1,0 +1,323 @@
+(*set attacker = passive.*)
+
+free c: channel.
+
+const xCurve:bitstring [data].
+const xBase:bitstring [data].
+const t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11:bitstring [data].
+const ascii_:bitstring [data].
+const ascii_6666666666666666666666666666666666666666666666666666666666666666:bitstring [data].
+const ascii_Alice:bitstring [data].
+const ascii_TLS13serverCertificateVerify:bitstring [data].
+const ascii_tls13chstraffic:bitstring [data].
+const ascii_tls13derived:bitstring [data].
+const ascii_tls13finished:bitstring [data].
+const ascii_tls13iv:bitstring [data].
+const ascii_tls13key:bitstring [data].
+const ascii_tls13saptraffic:bitstring [data].
+const ascii_tls13shstraffic:bitstring [data].
+const x00:bitstring [data].
+const x0000:bitstring [data].
+const x0000000000000001:bitstring [data].
+const x0000000000000002:bitstring [data].
+const x00000000_12:bitstring [data].
+const x00000000_32:bitstring [data].
+const x00000001:bitstring [data].
+const x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:bitstring [data].
+const x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e20:bitstring [data].
+const x000a:bitstring [data].
+const x000b:bitstring [data].
+const x000c:bitstring [data].
+const x000d:bitstring [data].
+const x0010:bitstring [data].
+const x0016:bitstring [data].
+const x0017:bitstring [data].
+const x0020:bitstring [data].
+const x0023:bitstring [data].
+const x002b:bitstring [data].
+const x002d:bitstring [data].
+const x002f:bitstring [data].
+const x0031:bitstring [data].
+const x0033:bitstring [data].
+const x0035:bitstring [data].
+const x0039:bitstring [data].
+const x003c:bitstring [data].
+const x003d:bitstring [data].
+const x0067:bitstring [data].
+const x006b:bitstring [data].
+const x009c:bitstring [data].
+const x009d:bitstring [data].
+const x009e:bitstring [data].
+const x009f:bitstring [data].
+const x00ff:bitstring [data].
+const x01:bitstring [data].
+const x02:bitstring [data].
+const x0201:bitstring [data].
+const x0202:bitstring [data].
+const x0203:bitstring [data].
+const x03:bitstring [data].
+const x0301:bitstring [data].
+const x0302:bitstring [data].
+const x0303:bitstring [data].
+const x0304:bitstring [data].
+const x04:bitstring [data].
+const x0401:bitstring [data].
+const x0402:bitstring [data].
+const x0403:bitstring [data].
+const x0501:bitstring [data].
+const x0502:bitstring [data].
+const x0503:bitstring [data].
+const x06:bitstring [data].
+const x0601:bitstring [data].
+const x0602:bitstring [data].
+const x0603:bitstring [data].
+const x08:bitstring [data].
+const x0804:bitstring [data].
+const x0805:bitstring [data].
+const x0806:bitstring [data].
+const x0807:bitstring [data].
+const x0808:bitstring [data].
+const x0809:bitstring [data].
+const x080a:bitstring [data].
+const x080b:bitstring [data].
+const x0b:bitstring [data].
+const x0c:bitstring [data].
+const x0f:bitstring [data].
+const x13:bitstring [data].
+const x1301:bitstring [data].
+const x14:bitstring [data].
+const x16:bitstring [data].
+const x17:bitstring [data].
+const x2a864886f70d010901:bitstring [data].
+const x2a8648ce3d0201:bitstring [data].
+const x2a8648ce3d030107:bitstring [data].
+const x30:bitstring [data].
+const x31:bitstring [data].
+const x550403:bitstring [data].
+const x550406:bitstring [data].
+const x550408:bitstring [data].
+const x55040a:bitstring [data].
+const x55040b:bitstring [data].
+const x5a:bitstring [data].
+const x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c2964fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5:bitstring [data].
+const x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8:bitstring [data].
+const x7f1a:bitstring [data].
+const x7f1b:bitstring [data].
+const x7f1c:bitstring [data].
+const xa0:bitstring [data].
+const xa1:bitstring [data].
+const xc009:bitstring [data].
+const xc00a:bitstring [data].
+const xc013:bitstring [data].
+const xc014:bitstring [data].
+const xc023:bitstring [data].
+const xc024:bitstring [data].
+const xc027:bitstring [data].
+const xc028:bitstring [data].
+const xc02b:bitstring [data].
+const xc02c:bitstring [data].
+const xc02f:bitstring [data].
+const xc030:bitstring [data].
+const xcca8:bitstring [data].
+const xcca9:bitstring [data].
+const xccaa:bitstring [data].
+const xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551:bitstring [data].
+const xnull:bitstring [data].
+const tls13_resumption_psk_binder_key:bitstring [data].
+const tls13_resumption_master:bitstring [data].
+
+fun Hash(bitstring):bitstring.
+fun Add1(bitstring):bitstring.
+fun HMAC(bitstring,bitstring):bitstring.
+fun Exp(bitstring,bitstring,bitstring):bitstring.
+fun Sign(bitstring,bitstring):bitstring.
+  reduc forall msg:bitstring,sign_key:bitstring;
+    CheckSign(Sign(msg, sign_key), Exp(xCurve, xBase, sign_key)) = msg.
+fun PadWith064(bitstring):bitstring.
+fun Encrypt(bitstring,bitstring,bitstring,bitstring):bitstring.
+  reduc forall a0:bitstring,a1:bitstring,a2:bitstring,a3:bitstring; Decrypt(Encrypt(a0,a1,a2,a3),a1,a2,a3) = a0.
+fun Padx0016(bitstring,bitstring):bitstring.
+  reduc forall a0:bitstring,a1:bitstring; Unpadx0016(Padx0016(a0,a1),a1) = a0.
+
+equation forall a1:bitstring,a2:bitstring;
+  Exp(xCurve, Exp(xCurve, xBase, a1), a2) = Exp(xCurve, Exp(xCurve, xBase, a2), a1).
+
+type ID.
+type SessionNumber.
+const Client,Server,TTP:ID.
+const session1,session2,session3:SessionNumber.
+table PubKeyTable(ID, bitstring).
+table PrivKeyTable(ID, bitstring).
+table TableForCertificates(ID, bitstring).
+table SessionTicketsTable(ID, SessionNumber, bitstring).
+table MasterSecretsTable(ID, SessionNumber, bitstring).
+
+event Client_end(bitstring).
+event Server_end(bitstring).
+event TTP_mess(bitstring).
+event Client_mess(bitstring).
+event Server_mess(bitstring).
+event ServerFinished_Check(bitstring).
+event ServerFinished(bitstring).
+event ClientFinished(bitstring).
+event ClientFinished_Check(bitstring).
+event TicketNonceClient(bitstring).
+event TicketNonceServer(bitstring).
+event Clnt_psk_end(bitstring).
+event Serv_psk_end(bitstring).
+event Clnt_psk_mess(bitstring).
+event Serv_psk_mess(bitstring).
+
+letfun prf(key:bitstring,x:bitstring) =
+  HMAC(key, x).
+letfun hkdf_extract(str:bitstring,key:bitstring) =
+  prf(str, key).
+letfun hkdf_expand_label(key:bitstring,label:bitstring,h:bitstring) =
+  prf(key,(label,h)).
+letfun derive_secret(key:bitstring,label:bitstring,msg:bitstring) =
+  hkdf_expand_label(key,label,Hash(msg)).
+letfun kdf_es(rmS:bitstring, ticket:bitstring) =
+  let es = hkdf_extract(ticket, rmS) in
+  let binder_mac_key = derive_secret(es,tls13_resumption_psk_binder_key,ticket) in
+    (es,binder_mac_key).
+
+letfun create_2_part_mess(code:bitstring, msg:bitstring) = msg.
+
+letfun get_cert(servAddr:bitstring, o846:bitstring, cert_priv_key:bitstring, cert_pub_key:bitstring) =
+  (* create f786_part_1 *)
+  let f786_part_1 = create_2_part_mess(xa0, xnull) in
+  (* create f786_part_2 *)
+  let f786_part_2 = create_2_part_mess(x02, xnull) in
+  (* create f786_part_3 *)
+  let f481 = create_2_part_mess(x06, xnull) in
+  let f786_part_3 = create_2_part_mess(x30, f481) in
+
+  (* create vHshkCertNameServ *)
+  let vOIDCountry = x550406 in
+  let f490 = create_2_part_mess(x06, vOIDCountry) in
+  let f659 = (f490, create_2_part_mess(x13, xnull)) in
+  let f662 = create_2_part_mess(x30, f659) in
+
+  let f496 = (f490, create_2_part_mess(x13, xnull)) in
+  let f499 = create_2_part_mess(x30, f496) in
+  let vOIDProvince = x550408 in
+  let f507 = create_2_part_mess(x06, vOIDProvince) in
+  let f513 = (f507, create_2_part_mess(x0c, xnull)) in
+  let f516 = create_2_part_mess(x30, f513) in
+  let vOIDOrganization = x55040a in
+  let f540 = create_2_part_mess(x06,vOIDOrganization) in
+  let f545 = (f540, create_2_part_mess(x0c, xnull)) in
+  let f548 = create_2_part_mess(x30, f545) in
+  let vOIDOrgUnit = x55040b in
+  let f556 = create_2_part_mess(x06,vOIDOrgUnit) in
+  let f561 = (f556, create_2_part_mess(x0c, xnull)) in
+  let f564 = create_2_part_mess(x30, f561) in
+  let vOIDCommonName = x550403 in
+  let f572 = create_2_part_mess(x06,vOIDCommonName) in
+  let f577 = (f572, create_2_part_mess(x0c, xnull)) in
+  let f580 = create_2_part_mess(x30, f577) in
+
+  (*let vOIDEmailAddress = x2a864886f70d010901 in*)
+  let vOIDEmailAddress = servAddr in
+  let f596 = create_2_part_mess(x06,vOIDEmailAddress) in
+  let f601 = (f596, create_2_part_mess(x0c, xnull)) in
+  let f604 = create_2_part_mess(x30, f601) in
+  let o635 = (create_2_part_mess(x31, f499),
+              create_2_part_mess(x31, f516),
+              create_2_part_mess(x31, f548),
+              create_2_part_mess(x31, f564),
+              create_2_part_mess(x31, f580),
+              create_2_part_mess(x31, f604)) in
+  let vHshkCertNameServ = create_2_part_mess(x30, o635) in
+
+  (* create f786_part_5 *)
+  let f641 = (xnull, x5a) in
+  let f646 = (xnull, x5a) in
+  let f650 = (create_2_part_mess(x17, f641),
+              create_2_part_mess(x17, f646)) in
+  let f786_part_5 = create_2_part_mess(x30, f650) in
+
+  (* create vHshkCertNameCA *)
+  let vOIDProvince = x550408 in
+  let f507 = create_2_part_mess(x06, vOIDProvince) in
+  let f670 = (f507, create_2_part_mess(x0c, xnull)) in
+  let f673 = create_2_part_mess(x30, f670) in
+  let vOIDOrganization = x55040a in
+  let f540 = create_2_part_mess(x06, vOIDOrganization) in
+  let f692 = (f540, create_2_part_mess(x0c, xnull)) in
+  let f695 = create_2_part_mess(x30, f692) in
+  let vOIDOrgUnit = x55040b in
+  let f556 = create_2_part_mess(x06, vOIDOrgUnit) in
+  let f703 = (f556, create_2_part_mess(x0c, xnull)) in
+  let f706 = create_2_part_mess(x30, f703) in
+  let vOIDCommonName = x550403 in
+  let f572 = create_2_part_mess(x06, vOIDCommonName) in
+  let f714 = (f572, create_2_part_mess(x0c, xnull)) in
+  let f717 = create_2_part_mess(x30, f714) in
+  let vOIDEmailAddress = x2a864886f70d010901 in
+  let f596 = create_2_part_mess(x06, vOIDEmailAddress) in
+  let f733 = (f596, create_2_part_mess(x16, xnull)) in
+  let f736 = create_2_part_mess(x30, f733) in
+  let o762 = (create_2_part_mess(x31, f662),
+              create_2_part_mess(x31, f673),
+              create_2_part_mess(x31, f695),
+              create_2_part_mess(x31, f706),
+              create_2_part_mess(x31, f717),
+              create_2_part_mess(x31, f736)) in
+  let vHshkCertNameCA = create_2_part_mess(x30, o762) in
+
+  (* create f786_part_7 *)
+  let vHshkCertCurveIdCA = xCurve in
+  let o770 = create_2_part_mess(x06, vHshkCertCurveIdCA) in
+  let vHshkCertPubkeyAlgObj = x2a8648ce3d0201 in
+  let f771 = (create_2_part_mess(x06, vHshkCertPubkeyAlgObj), o770) in
+  let f781_part_1 = create_2_part_mess(x30, f771) in
+  let vHshkCertPointFmt = x04 in
+  let f847 = (vHshkCertPointFmt, o846) in
+  let f777 = f847 in
+  let f781_part_2 = create_2_part_mess(x03, f777) in
+  let f781 = (f781_part_1, f781_part_2) in
+  let f786_part_7 = create_2_part_mess(x30, f781) in
+
+  (* create vHshkCertExtensions *)
+  let vHshkCertExtensions = xnull in
+  let f786 = (f786_part_1, f786_part_2, f786_part_3, vHshkCertNameServ,
+              f786_part_5, vHshkCertNameCA, f786_part_7, vHshkCertExtensions) in
+  let f793 = create_2_part_mess(x06, cert_pub_key) in
+
+  (* f798 -- sign of the certificate *)
+  let f798 = Sign(f786, cert_priv_key) in
+  let f802 = (create_2_part_mess(x30, f786),
+              cert_pub_key,
+              create_2_part_mess(x03, f798)) in
+  create_2_part_mess(x30, f802).
+
+let processTTP =
+  (*o846 -- serverPubKey*)
+  event TTP_mess(t5);
+  get PrivKeyTable(=TTP, ttp_priv_key) in
+  get PubKeyTable(=TTP, ttp_pub_key) in
+  get PubKeyTable(=Server,o846) in
+  let servAddr = x2a864886f70d010901 in
+  let vCertificate = get_cert(servAddr, o846, ttp_priv_key, ttp_pub_key) in
+  insert TableForCertificates(Server, vCertificate);
+  out(c, vCertificate);
+  (* cert for Adv *)
+  new adv_priv_key:bitstring;
+  out(c, adv_priv_key);
+  let adv_pub_key = Exp(xCurve, xBase, adv_priv_key) in
+  new advAddr:bitstring;
+  let vCertificate_Adv = get_cert(advAddr, adv_pub_key, ttp_priv_key, ttp_pub_key) in
+  out(c, vCertificate_Adv).
+
+let processLongKeys =
+  new ttp_priv_key:bitstring;
+  insert PrivKeyTable(TTP,ttp_priv_key);
+  let ttp_pub_key = Exp(xCurve, xBase, ttp_priv_key) in
+  insert PubKeyTable(TTP,ttp_pub_key);
+  new kHshkCertSigX_ECScalar448:bitstring;
+  insert PrivKeyTable(Server,kHshkCertSigX_ECScalar448);
+  let server_pub_key = Exp(xCurve, xBase, kHshkCertSigX_ECScalar448) in
+  insert PubKeyTable(Server,server_pub_key);
+  out(c,ttp_pub_key);
+  out(c,server_pub_key).

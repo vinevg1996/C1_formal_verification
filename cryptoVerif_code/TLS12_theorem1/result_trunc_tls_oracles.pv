@@ -1,0 +1,499 @@
+(*param N, NA, NB, NK.*)
+
+type host.
+type keyseed [large,fixed].
+type seed [fixed].
+type pkey [bounded].
+type skey [bounded].
+type blocksize.
+type serv_signature.
+type clnt_signature.
+
+(* Peers *)
+const Clnt,Serv:host.
+
+type Z [large,bounded].
+type G [large,bounded].
+type D [fixed].
+type nonce [large, fixed].
+
+(* ms *)
+type prf_ms_in.
+type concat_for_ms_t.
+type PRF_ms_out [fixed].
+(* sign *)
+type concat_for_serv_sign_t. type concat_for_clnt_sign_t.
+(* finished *)
+type concat_for_serv_fin_t. type concat_for_clnt_fin_t.
+type PRF_serv_fin_out [fixed]. type PRF_clnt_fin_out [fixed].
+(* common_key *)
+type concat_for_common_key_t.
+type PRF_common_key_out [fixed].
+
+(* mess_types *)
+type mess1_t.
+type mess2_t. type mess3_t. type mess4_t.
+type mess7_t. type mess8_t. type mess9_t. type mess11_t.
+type mess13_t.
+fun Mess1(nonce):mess1_t [data].
+fun Mess2(nonce):mess2_t [data].
+fun Mess3(pkey):mess3_t [data].
+fun Mess4(G, serv_signature):mess4_t [data].
+fun Mess7(pkey):mess7_t [data].
+fun Mess8(G):mess8_t [data].
+fun Mess9(clnt_signature):mess9_t [data].
+fun Mess11(PRF_clnt_fin_out):mess11_t [data].
+fun Mess13(PRF_serv_fin_out):mess13_t [data].
+
+(* functions *)
+fun concat_for_ms(nonce, nonce):concat_for_ms_t [data].
+fun concat_for_serv_sign(nonce, nonce, G):concat_for_serv_sign_t [data].
+fun concat_for_clnt_sign(mess1_t, mess2_t, mess3_t,
+                         mess4_t, mess7_t, mess8_t):concat_for_clnt_sign_t [data].
+fun concat_for_clnt_fin(mess1_t, mess2_t, mess3_t,
+                        mess4_t, mess7_t, mess8_t,
+                        mess9_t):concat_for_clnt_fin_t [data].
+fun concat_for_serv_fin(mess1_t, mess2_t, mess3_t,
+                        mess4_t, mess7_t, mess8_t,
+                        mess9_t, PRF_clnt_fin_out):concat_for_serv_fin_t [data].
+fun concat_for_common_key(nonce, nonce):concat_for_common_key_t [data].
+
+expand DH_basic(G, Z, g, exp, exp', mult).
+
+proba Psign. proba Psigncoll.
+(* Server signatures *)
+expand UF_CMA_proba_signature(keyseed, pkey, skey, concat_for_serv_sign_t, serv_signature,
+                              serv_skgen, serv_pkgen, serv_sign, serv_verify, Psign, Psigncoll).
+expand UF_CMA_proba_signature(keyseed, pkey, skey, concat_for_clnt_sign_t, clnt_signature,
+                              clnt_skgen, clnt_pkgen, clnt_sign, clnt_verify, Psign, Psigncoll).
+
+(* PRF_ODH for ms *)
+proba pPRF_ODH_ms.
+expand PRF_ODH1(G, Z, concat_for_ms_t, PRF_ms_out, g, exp, exp',
+                mult, PRF_ms, pPRF_ODH_ms).
+
+(*mac(scvl,sfk) = m*)
+fun PRF_serv_fin(PRF_ms_out, concat_for_serv_fin_t):PRF_serv_fin_out.
+fun PRF_clnt_fin(PRF_ms_out, concat_for_clnt_fin_t):PRF_clnt_fin_out.
+
+(*crypto suf_cma(serv_fin) *;*)
+proba Pmac.
+expand SUF_CMA_det_mac(PRF_ms_out, concat_for_serv_fin_t, PRF_serv_fin_out,
+                       serv_fin, serv_check_fin, Pmac).
+expand SUF_CMA_det_mac(PRF_ms_out, concat_for_clnt_fin_t, PRF_clnt_fin_out,
+                       clnt_fin, clnt_check_fin, Pmac).
+
+
+proba pPRF_fin.
+(*
+expand PRF_1(PRF_ms_out, concat_for_serv_fin_t, PRF_serv_fin_out, PRF_serv_fin, pPRF_fin).
+expand PRF_1(PRF_ms_out, concat_for_clnt_fin_t, PRF_clnt_fin_out, PRF_clnt_fin, pPRF_fin).
+*)
+expand PRF_1(PRF_ms_out, concat_for_common_key_t, PRF_common_key_out,
+             PRF_common_key, pPRF_fin).
+
+(*
+crypto cma_gen_serv_fin_first(serv_fin)
+crypto cma_gen_clnt_fin_second(clnt_fin)
+crypto PRF_common_key *
+*)
+
+channel start, cstart,
+        c1, c2, c3, c4, c5, c6,
+        s1, s2, s3, s4.
+
+(* Queries and Events *)
+event endA(G, G).
+event beginB(G, G).
+event endB(G, G).
+
+event Client_Accept.
+event Server_Accept.
+event Client_Reject.
+event Server_Reject.
+
+(*
+query secret common_key.
+query event(Client_Reject) && event(Server_Accept).
+*)
+query secret common_key.
+
+proof {
+  crypto uf_cma(serv_sign) rkS;
+  crypto uf_cma(clnt_sign) rkC;
+  crypto prf_odh(PRF_ms);
+  crypto cma_gen_serv_fin_first(serv_fin);
+  crypto cma_gen_clnt_fin_second(clnt_fin);
+  crypto PRF_common_key;
+  success
+}
+(* PRF for finished *)
+(* serv_fin = PRF_serv_fin(PRF_ms_out, concat_for_serv_fin_t):PRF_serv_fin_out *)
+(* clnt_fin = PRF_clnt_fin(PRF_ms_out, concat_for_clnt_fin_t):PRF_clnt_fin_out *)
+(* common_key = PRF_common_key(PRF_ms_out, clnt_ms_in) *)
+
+fun serv_fin'(concat_for_serv_fin_t, PRF_ms_out):PRF_serv_fin_out.
+fun clnt_fin'(concat_for_clnt_fin_t, PRF_ms_out):PRF_clnt_fin_out.
+proba P_fin.
+proba p_mutual_PRF.
+param N, N1, N2, N3, N4, N5.
+
+equiv(cma_gen_serv_fin_first(serv_fin))
+  ! i1 <= N
+    new k: PRF_ms_out;
+    (
+      ! i1_1 <= N1
+        Omac_serv(log1: concat_for_serv_fin_t) :=
+          return(serv_fin(log1, k)) |
+      ! i1_2 <= N2
+        Ocheck_serv(m_2: concat_for_serv_fin_t, ma: PRF_serv_fin_out) [useful_change]
+          := return(serv_check_fin(m_2, k, ma)) |
+      ! i1_3 <= N3
+        Omac_clnt(x_1: concat_for_clnt_fin_t) := return(clnt_fin(x_1, k)) |
+      ! i1_4 <= N4
+        Ocheck_clnt(m_2: concat_for_clnt_fin_t, ma: PRF_clnt_fin_out) [useful_change]
+          := return(clnt_check_fin(m_2, k, ma)) |
+      ! i1_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    )
+  <=(N * P_fin(time, N1))=> [computational]
+  ! i2 <= N
+    new k: PRF_ms_out [unchanged];
+    (
+      ! i2_1 <= N1
+        Omac_serv(x_3: concat_for_serv_fin_t) := let x_2: concat_for_serv_fin_t = x_3 in
+        (
+          let ma2_1: PRF_serv_fin_out = serv_fin'(x_2, k) in return(ma2_1)
+        ) |
+      ! i2_2 <= N2
+        Ocheck_serv(m_3: concat_for_serv_fin_t, ma_2: PRF_serv_fin_out) [useful_change] :=
+          let m_1: concat_for_serv_fin_t = m_3 in
+          (
+            let ma_1: PRF_serv_fin_out = ma_2 in
+            find j_1 = j <= N1 suchthat
+              defined(x_2[j], ma2_1[j]) &&
+              (m_1 = x_2[j]) &&
+              (ma_1 = ma2_1[j]) then
+                return(true)
+            else
+              return(false)
+          ) |
+      ! i2_3 <= N3
+        Omac_clnt(x_1: concat_for_clnt_fin_t) := return(clnt_fin(x_1, k)) |
+      ! i2_4 <= N4
+        Ocheck_clnt(m_2: concat_for_clnt_fin_t, ma: PRF_clnt_fin_out) [useful_change]
+          := return(clnt_check_fin(m_2, k, ma)) |
+      ! i2_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    ).
+
+equiv(cma_gen_clnt_fin_second(clnt_fin))
+  ! i1 <= N
+    new k: PRF_ms_out;
+    (
+      ! i1_1 <= N1
+        Omac_serv'(log1: concat_for_serv_fin_t) :=
+          return(serv_fin'(log1, k)) |
+      ! i1_3 <= N3
+        Omac_clnt(x_1: concat_for_clnt_fin_t) := return(clnt_fin(x_1, k)) |
+      ! i1_4 <= N4
+        Ocheck_clnt(m_2: concat_for_clnt_fin_t, ma: PRF_clnt_fin_out) [useful_change]
+          := return(clnt_check_fin(m_2, k, ma)) |
+      ! i1_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    )
+  <=(N * P_fin(time, N3))=> [computational]
+  ! i2 <= N
+    new k: PRF_ms_out [unchanged];
+    (
+      ! i2_1 <= N1
+        Omac_serv'(log1: concat_for_serv_fin_t) :=
+          return(serv_fin'(log1, k)) |
+      ! i2_3 <= N3
+        Omac_clnt(x_3: concat_for_clnt_fin_t) := let x_2: concat_for_clnt_fin_t = x_3 in
+        (
+          let ma2_1: PRF_clnt_fin_out = clnt_fin'(x_2, k) in return(ma2_1)
+        ) |
+      ! i2_4 <= N4
+        Ocheck_clnt(m_3: concat_for_clnt_fin_t, ma_2: PRF_clnt_fin_out) [useful_change] :=
+          let m_1: concat_for_clnt_fin_t = m_3 in
+          (
+            let ma_1: PRF_clnt_fin_out = ma_2 in
+            find j_1 = j <= N3 suchthat
+              defined(x_2[j], ma2_1[j]) &&
+              (m_1 = x_2[j]) &&
+              (ma_1 = ma2_1[j]) then
+                return(true)
+            else
+              return(false)
+          ) |
+      ! i2_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    ).
+
+equiv(PRF_common_key)
+!i1 <= N
+  new k: PRF_ms_out;
+  (
+    !i1_1 <= N1
+      Omac_serv'(log1: concat_for_serv_fin_t) :=
+        return(serv_fin'(log1, k)) |
+    !i1_2 <= N2
+      Omac_clnt'(log1: concat_for_clnt_fin_t) :=
+        return(clnt_fin'(log1, k)) |
+    !i1_3 <= N3
+      OC_common_key(log: concat_for_common_key_t) :=
+        return(PRF_common_key(k, log))
+  )
+<=(N * p_mutual_PRF(time, N3))=>
+!i2 <= N
+  new k: PRF_ms_out;
+  (
+  !i2_1 <= N1
+    Omac_serv'(log1: concat_for_serv_fin_t) :=
+      return(serv_fin'(log1, k)) |
+  !i2_2 <= N2
+    Omac_clnt'(log1: concat_for_clnt_fin_t) :=
+      return(clnt_fin'(log1, k)) |
+  !i2_3 <= N3
+    OC_common_key(log2: concat_for_common_key_t) := let
+      log2_1:concat_for_common_key_t = log2 in
+         find [unique] j_1 = j <= N3 suchthat
+           defined(log2_1[j], r_3[j]) &&
+           (log2_1 = log2_1[j]) then
+             return(r_3[j_1])
+         else
+           new r_3: PRF_common_key_out; return(r_3)
+  ).
+
+equiv(cma_gen_clnt_fin_first(clnt_fin))
+  ! i1 <= N
+    new k: PRF_ms_out;
+    (
+      ! i1_1 <= N1
+        Omac_clnt(x_1: concat_for_clnt_fin_t) :=
+          return(clnt_fin(x_1, k)) |
+      ! i1_2 <= N2
+        Ocheck_clnt(m_2: concat_for_clnt_fin_t, ma: PRF_clnt_fin_out) [useful_change]
+          := return(clnt_check_fin(m_2, k, ma)) |
+      ! i1_3 <= N3
+        Omac_serv(log1: concat_for_serv_fin_t) :=
+          return(serv_fin(log1, k)) |
+      ! i1_2 <= N4
+        Ocheck_serv(m_2: concat_for_serv_fin_t, ma: PRF_serv_fin_out) [useful_change]
+          := return(serv_check_fin(m_2, k, ma)) |
+      ! i1_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    )
+<=(N * P_fin(time, N1))=> [computational]
+  ! i2 <= N
+    new k: PRF_ms_out [unchanged];
+    (
+      ! i2_1 <= N1
+        Omac_clnt(x_3: concat_for_clnt_fin_t) := let x_2: concat_for_clnt_fin_t = x_3 in
+        (
+          let ma2_1: PRF_clnt_fin_out = clnt_fin'(x_2, k) in return(ma2_1)
+        ) |
+      ! i2_2 <= N2
+        Ocheck_clnt(m_3: concat_for_clnt_fin_t, ma_2: PRF_clnt_fin_out) [useful_change] :=
+          let m_1: concat_for_clnt_fin_t = m_3 in
+          (
+            let ma_1: PRF_clnt_fin_out = ma_2 in
+            find j_1 = j <= N1 suchthat
+              defined(x_2[j], ma2_1[j]) &&
+              (m_1 = x_2[j]) &&
+              (ma_1 = ma2_1[j]) then
+                return(true)
+            else
+              return(false)
+          ) |
+      ! i2_3 <= N3
+        Omac_serv(x_1: concat_for_serv_fin_t) := return(serv_fin(x_1, k)) |
+      ! i2_4 <= N4
+        Ocheck_serv(m_2: concat_for_serv_fin_t, ma: PRF_serv_fin_out) [useful_change]
+          := return(serv_check_fin(m_2, k, ma)) |
+      ! i2_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    ).
+
+equiv(cma_gen_serv_fin_second(serv_fin))
+  ! i1 <= N
+    new k: PRF_ms_out;
+    (
+      ! i1_1 <= N1
+        Omac_clnt'(log1: concat_for_clnt_fin_t) :=
+          return(clnt_fin'(log1, k)) |
+      ! i1_3 <= N3
+        Omac_serv(x_1: concat_for_serv_fin_t) := return(serv_fin(x_1, k)) |
+      ! i1_4 <= N4
+        Ocheck_serv(m_2: concat_for_serv_fin_t, ma: PRF_serv_fin_out) [useful_change]
+          := return(serv_check_fin(m_2, k, ma)) |
+      ! i1_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    )
+  <=(N * P_fin(time, N3))=> [computational]
+  ! i2 <= N
+    new k: PRF_ms_out [unchanged];
+    (
+      ! i2_1 <= N1
+        Omac_clnt'(log1: concat_for_clnt_fin_t) :=
+          return(clnt_fin'(log1, k)) |
+      ! i2_3 <= N3
+        Omac_serv(x_3: concat_for_serv_fin_t) := let x_2: concat_for_serv_fin_t = x_3 in
+        (
+          let ma2_1: PRF_serv_fin_out = serv_fin'(x_2, k) in return(ma2_1)
+        ) |
+      ! i2_4 <= N4
+        Ocheck_serv(m_3: concat_for_serv_fin_t, ma_2: PRF_serv_fin_out) [useful_change] :=
+          let m_1: concat_for_serv_fin_t = m_3 in
+          (
+            let ma_1: PRF_serv_fin_out = ma_2 in
+            find j_1 = j <= N3 suchthat
+              defined(x_2[j], ma2_1[j]) &&
+              (m_1 = x_2[j]) &&
+              (ma_1 = ma2_1[j]) then
+                return(true)
+            else
+              return(false)
+          ) |
+      ! i2_5 <= N5
+        OC_gen_key(log: concat_for_common_key_t) :=
+          return(PRF_common_key(k, log))
+    ).
+(*
+crypto PRF_serv_fin *
+proof {
+  crypto uf_cma(sign) rkS;
+  crypto uf_cma(sign) rkC;
+  crypto prf_odh(PRF_ms);
+  simplify;
+  crypto PRFmutual *;
+  interactive;
+  auto
+}
+*)
+
+let processC(skC:skey, pkC:pkey, pkS:pkey) =
+  (* Client_Request() oracle *)
+  in(c1, ());
+  new clnt_rc:nonce;
+  let clnt_m1 = Mess1(clnt_rc) in
+  out(c2, clnt_m1);
+
+  (* Client_Response() oracle *)
+  in(c3, (clnt_m2:mess2_t, clnt_m3:mess3_t, clnt_m4:mess4_t));
+  let Mess2(clnt_rs:nonce) = clnt_m2 in
+  let Mess3(clnt_serv_cert:pkey) = clnt_m3 in
+  let Mess4(clnt_TS:G, clnt_serv_sign:serv_signature) = clnt_m4 in
+  let clnt_mess_for_serv_sign = concat_for_serv_sign(clnt_rc, clnt_rs, clnt_TS) in
+  if serv_verify(clnt_mess_for_serv_sign, pkS, clnt_serv_sign) then
+    new clnt_tC:Z;
+    let clnt_TC = exp(g,clnt_tC) in
+    let clnt_clnt_cert = pkC in
+    let clnt_m7 = Mess7(clnt_clnt_cert) in
+    let clnt_m8 = Mess8(clnt_TC) in
+    let clnt_mess_for_clnt_sign = concat_for_clnt_sign(clnt_m1, clnt_m2, clnt_m3,
+                                                       clnt_m4, clnt_m7, clnt_m8) in
+    let clnt_clnt_sig = clnt_sign(clnt_mess_for_clnt_sign, skC) in
+    let clnt_pms = exp(clnt_TS, clnt_tC) in
+    let clnt_ms_in = concat_for_ms(clnt_rc, clnt_rs) in
+    let clnt_ms = PRF_ms(clnt_pms, clnt_ms_in) in
+    let clnt_common_key_in = concat_for_common_key(clnt_rc, clnt_rs) in
+    let clnt_common_key:PRF_common_key_out = PRF_common_key(clnt_ms, clnt_common_key_in) in
+    let clnt_m9 = Mess9(clnt_clnt_sig) in
+    let clnt_mess_for_clnt_fin = concat_for_clnt_fin(clnt_m1, clnt_m2, clnt_m3,
+                                                     clnt_m4, clnt_m7, clnt_m8,
+                                                     clnt_m9) in
+    (*let clnt_clnt_fin = PRF_clnt_fin(clnt_ms, clnt_mess_for_clnt_fin) in*)
+    let clnt_clnt_fin = clnt_fin(clnt_mess_for_clnt_fin, clnt_ms) in
+    let clnt_m11 = Mess11(clnt_clnt_fin) in
+    out(c4, (clnt_m7, clnt_m8, clnt_m9, clnt_m11));
+
+    (* Client_Accept() oracle *)
+    in(c5, clnt_m13:mess13_t);
+    let Mess13(clnt_serv_fin:PRF_serv_fin_out) = clnt_m13 in
+    let clnt_mess_for_serv_fin = concat_for_serv_fin(clnt_m1, clnt_m2, clnt_m3,
+                                                     clnt_m4, clnt_m7, clnt_m8,
+                                                     clnt_m9, clnt_clnt_fin) in
+    (*if PRF_serv_fin(clnt_ms, clnt_mess_for_serv_fin) = clnt_serv_fin then*)
+    if serv_fin(clnt_mess_for_serv_fin, clnt_ms) = clnt_serv_fin then
+    (
+      event Client_Accept;
+      let common_key:PRF_common_key_out = clnt_common_key in
+      out(c6, ())
+    )
+    else
+    (
+      event Client_Reject;
+      out(c6, ())
+    ).
+let processS(skS:skey, pkS:pkey, pkC:pkey) =
+(* Server_Response() oracle *)
+  in(s1, serv_m1:mess1_t);
+  let Mess1(serv_rc:nonce) = serv_m1 in
+  new serv_rs:nonce;
+  new serv_tS:Z;
+  let serv_TS = exp(g, serv_tS) in
+  let serv_serv_cert = pkS in
+  let serv_m2 = Mess2(serv_rs) in
+  let serv_m3 = Mess3(serv_serv_cert) in
+  let serv_mess_for_serv_sign = concat_for_serv_sign(serv_rc, serv_rs, serv_TS) in
+  let serv_serv_sign = serv_sign(serv_mess_for_serv_sign, skS) in
+  let serv_m4 = Mess4(serv_TS, serv_serv_sign) in
+  out(s2, (serv_m1, serv_m2, serv_m3, serv_m4));
+
+(* Server_Accept() oracle *)
+  in(s3, (serv_m7:mess7_t, serv_m8:mess8_t, serv_m9:mess9_t, serv_m11:mess11_t));
+  let Mess7(serv_clnt_cert:pkey) = serv_m7 in
+  let Mess8(serv_TC:G) = serv_m8 in
+  let Mess9(serv_clnt_sign:clnt_signature) = serv_m9 in
+  let serv_mess_for_clnt_sign = concat_for_clnt_sign(serv_m1, serv_m2, serv_m3,
+                                                     serv_m4, serv_m7, serv_m8) in
+  if clnt_verify(serv_mess_for_clnt_sign, pkC, serv_clnt_sign) then
+    let serv_pms = exp(serv_TC, serv_tS) in
+    let serv_ms_in = concat_for_ms(serv_rc, serv_rs) in
+    let serv_ms = PRF_ms(serv_pms, serv_ms_in) in
+    let serv_common_key_in = concat_for_common_key(serv_rc, serv_rs) in
+    let serv_common_key:PRF_common_key_out = PRF_common_key(serv_ms, serv_common_key_in) in
+    let Mess11(serv_clnt_fin:PRF_clnt_fin_out) = serv_m11 in
+    let serv_mess_for_clnt_fin = concat_for_clnt_fin(serv_m1, serv_m2, serv_m3,
+                                                     serv_m4, serv_m7, serv_m8,
+                                                     serv_m9) in
+    let serv_mess_for_serv_fin = concat_for_serv_fin(serv_m1, serv_m2, serv_m3,
+                                                     serv_m4, serv_m7, serv_m8,
+                                                     serv_m9, serv_clnt_fin) in
+    (*let serv_serv_fin = PRF_serv_fin(serv_ms, serv_mess_for_serv_fin) in*)
+    let serv_serv_fin = serv_fin(serv_mess_for_serv_fin, serv_ms) in
+    let serv_m13 = Mess13(serv_serv_fin) in
+    (*if PRF_clnt_fin(serv_ms, serv_mess_for_clnt_fin) = serv_clnt_fin then*)
+    if clnt_fin(serv_mess_for_clnt_fin, serv_ms) = serv_clnt_fin then
+    (
+      event Server_Accept;
+      out(s4, serv_m13)
+    )
+    else
+    (
+      event Server_Reject;
+      out(s4, ())
+    ).
+
+process
+	in(start, ());
+	new rkC : keyseed;
+	let skC = clnt_skgen(rkC) in
+	let pkC = clnt_pkgen(rkC) in
+	new rkS : keyseed;
+	let skS = serv_skgen(rkS) in
+	let pkS = serv_pkgen(rkS) in
+	out(cstart, (pkC, pkS));
+  (
+    processC(skC, pkC, pkS) |
+    processS(skS, pkS, pkC)
+  )

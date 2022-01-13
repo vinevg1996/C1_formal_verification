@@ -1,0 +1,76 @@
+let processS(skS:skey, pkS:pkey, pkC:pkey, hk:hash_key) =
+(* Server_Response() oracle *)
+  in(s1, serv_m1:mess1_t);
+  let Mess1(serv_rc:nonce) = serv_m1 in
+  new serv_rs:nonce;
+  new serv_tS:Z;
+  let serv_TS = exp(g, serv_tS) in
+  let serv_serv_cert = pkS in
+  let serv_m2 = Mess2(serv_rs) in
+  let serv_m3 = Mess3(serv_serv_cert) in
+  let serv_mess_for_serv_sign = concat_for_serv_sign(serv_rc, serv_rs, serv_TS) in
+  let serv_serv_sign = serv_sign(serv_mess_for_serv_sign, skS) in
+  let serv_m4 = Mess4(serv_TS, serv_serv_sign) in
+  out(s2, (serv_m1, serv_m2, serv_m3, serv_m4));
+
+(* Server_Accept() oracle *)
+  in(s3, (serv_m7:mess7_t, serv_m8:mess8_t, serv_m9:mess9_t, serv_m11:mess11_t));
+  let Mess7(serv_clnt_cert:pkey) = serv_m7 in
+  let Mess8(serv_TC:G) = serv_m8 in
+  let Mess9(serv_clnt_sign:clnt_signature) = serv_m9 in
+  let serv_mess_for_clnt_sign = concat_for_clnt_sign(serv_m1, serv_m2, serv_m3,
+                                                     serv_m4, serv_m7, serv_m8) in
+  if clnt_verify(serv_mess_for_clnt_sign, pkC, serv_clnt_sign) then
+    let serv_pms = exp(serv_TC, serv_tS) in
+    let serv_ms_in = concat_for_ms(serv_rc, serv_rs) in
+    let serv_ms = PRF_ms(serv_pms, serv_ms_in) in
+    let serv_common_key_in = concat_for_common_key(serv_rc, serv_rs) in
+    let serv_common_key:four_keys = PRF_common_key(serv_ms, serv_common_key_in) in
+    let tuple4keys(serv_clnt_fin_enc_key:fin_key,
+                   serv_serv_fin_enc_key:fin_key,
+                   serv_clnt_enc_key:enc_key,
+                   serv_serv_enc_key:enc_key) = split4(serv_common_key) in
+    let Mess11(serv_enc_clnt_fin:enc_clnt_fin_t) = serv_m11 in
+    let clnt_injbot(serv_clnt_fin) = dec_clnt_fin(serv_enc_clnt_fin, serv_clnt_fin_enc_key) in
+
+    let serv_mess_for_clnt_fin = concat_for_clnt_fin(serv_m1, serv_m2, serv_m3,
+                                                     serv_m4, serv_m7, serv_m8,
+                                                     serv_m9) in
+    let serv_hash_for_clnt_fin = hash_clnt(hk, serv_mess_for_clnt_fin) in
+    let serv_mess_for_serv_fin = concat_for_serv_fin(serv_m1, serv_m2, serv_m3,
+                                                     serv_m4, serv_m7, serv_m8,
+                                                     serv_m9, serv_clnt_fin) in
+    let serv_hash_for_serv_fin = hash_serv(hk, serv_mess_for_serv_fin) in
+    (*let serv_serv_fin = PRF_serv_fin(serv_ms, serv_mess_for_serv_fin) in*)
+    let serv_serv_fin = serv_fin(serv_hash_for_serv_fin, serv_ms) in
+    let serv_enc_serv_fin = enc_serv_fin(serv_serv_fin, serv_serv_fin_enc_key) in
+    let serv_m13 = Mess13(serv_enc_serv_fin) in
+    (*if PRF_clnt_fin(serv_ms, serv_mess_for_clnt_fin) = serv_clnt_fin then*)
+    if clnt_fin(serv_hash_for_clnt_fin, serv_ms) = serv_clnt_fin then
+    (
+      event Server_Accept;
+      out(s4, serv_m13)
+    )
+    else
+    (
+      event Server_Reject;
+      out(s4, ())
+    ).
+
+process
+	in(start, ());
+  new hk:hash_key;
+	new rkC : keyseed;
+	let skC = clnt_skgen(rkC) in
+	let pkC = clnt_pkgen(rkC) in
+	new rkS : keyseed;
+	let skS = serv_skgen(rkS) in
+	let pkS = serv_pkgen(rkS) in
+	out(cstart, (pkC, pkS));
+  (
+    processC(skC, pkC, pkS, hk) |
+    processS(skS, pkS, pkC, hk) |
+    (* The next oracle gives the key of the collision resistant hash function to the adversary *)
+    hash_clnt_oracle(hk) |
+    hash_serv_oracle(hk)
+  )
